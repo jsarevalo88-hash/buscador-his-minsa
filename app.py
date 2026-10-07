@@ -43,7 +43,7 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
         with st.spinner("Analizando los manuales del MINSA cargados..."):
             try:
                 # Inicializamos el modelo de lectura rápida
-                model = ai.GenerativeModel('gemini-1.5-flash')
+                model = ai.GenerativeModel('gemini-1.5-flash-latest')
                 
                 # Instrucción estricta para el comportamiento del auditor HIS
                 prompt_sistema = (
