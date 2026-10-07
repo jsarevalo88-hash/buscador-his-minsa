@@ -1,62 +1,95 @@
-import streamlit as str
+import streamlit as st
 import google.generativeai as ai
+import os
 
-# 1. Configuración visual de la página (Adaptada a celulares)
-str.set_page_config(page_title="Buscador HIS MINSA", page_icon="🏥", layout="centered")
+# 1. Configuración visual de la página
+st.set_page_config(page_title="Buscador HIS MINSA", page_icon="🏥", layout="centered")
 
-str.title("🏥 Buscador Inteligente de Codificación HIS")
-str.subheader("Encuentra la forma correcta de registrar tus atenciones médicas")
-
-# 2. Conexión segura con la Inteligencia Artificial de Google
-# En producción, configurarás tu GEMINI_API_KEY en los secretos de Streamlit
+# 2. Conexión con la Inteligencia Artificial de Google
 try:
-    ai.configure(api_key=str.secrets["GEMINI_API_KEY"])
+    ai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 except Exception:
-    str.warning("⚠️ Falta configurar la clave API de Gemini en los secretos del servidor.")
+    st.warning("⚠️ Falta configurar la clave API de Gemini en los secretos del servidor.")
 
-# 3. Formulario de búsqueda
-consulta = str.text_input(
+# 3. Panel de Administración Lateral para subir PDFs
+with st.sidebar:
+    st.header("⚙️ Panel de Administración")
+    st.subheader("Cargar o Actualizar Manuales HIS")
+    
+    archivos_subidos = st.file_uploader(
+        "Sube los manuales oficiales en formato PDF:", 
+        type=["pdf"], 
+        accept_multiple_files=True,
+        help="Los archivos subidos se procesarán para alimentar el buscador inteligente."
+    )
+    
+    if archivos_subidos:
+        st.success(f"📚 {len(archivos_subidos)} manual(es) cargado(s) temporalmente.")
+        st.info("La IA procesará estos documentos como contexto para responder las consultas.")
+
+# 4. Interfaz Principal del Buscador
+st.title("🏥 Buscador Inteligente de Codificación HIS")
+st.subheader("Encuentra la forma correcta de registrar tus atenciones médicas")
+
+consulta = st.text_input(
     "¿Qué atención deseas registrar?", 
     placeholder="Ej: atención inmediata del recién nacido, tamizaje de depresión, etc."
 )
 
-if str.button("🔍 Buscar Forma de Registro", use_container_width=True):
+if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
     if consulta.strip() == "":
-        str.error("Por favor, escribe una atención para poder ayudarte.")
+        st.error("Por favor, escribe una atención para poder ayudarte.")
     else:
-        with str.spinner("Consultando los manuales oficiales del MINSA..."):
+        with st.spinner("Analizando los manuales del MINSA cargados..."):
             try:
-                # Inicializamos el modelo optimizado para lectura de documentos
+                # Inicializamos el modelo de lectura rápida
                 model = ai.GenerativeModel('gemini-1.5-flash')
                 
-                # Instrucciones estrictas para que la IA actúe como un digitador/auditor experto
+                # Instrucción estricta para el comportamiento del auditor HIS
                 prompt_sistema = (
-                    "Eres un asistente experto en codificación HIS y CIE-10 del Ministerio de Salud del Perú (MINSA). "
-                    "Tu trabajo es extraer de los manuales adjuntos la forma exacta de registrar la atención solicitada. "
-                    "Estructura tu respuesta estrictamente con los siguientes campos en formato markdown limpio:\n\n"
+                    "Eres un asistente experto en codificación HIS y CIE-10 del Ministerio de Salud del Perú (MINSA).\n"
+                    "Tu única tarea es extraer de los documentos proporcionados la forma exacta de registrar la atención solicitada.\n\n"
+                    "Estructura tu respuesta estrictamente con el siguiente formato markdown:\n\n"
                     "### 📋 FICHA DE REGISTRO HIS\n"
-                    "**- Actividad / Estrategia:** [Nombre de la estrategia]\n"
+                    "**- Actividad / Estrategia:** [Nombre de la estrategia sanitaria]\n"
                     "**- Tipo de Diagnóstico:** [P / D / R]\n\n"
                     "### 🔢 CÓDIGOS Y CAMPOS LAB\n"
                     "| Diagnóstico / Actividad | Campo LAB | Código CIE-10 / CPT |\n"
                     "| :--- | :--- | :--- |\n"
-                    "| [Ejemplo Diagnóstico] | [Ejemplo LAB] | [Ejemplo Código] |\n\n"
+                    "| [Nombre de la actividad] | [Valor de campo LAB] | [Código] |\n\n"
                     "### 📍 NOTAS / REQUISITOS\n"
-                    "[Cualquier observación importante o condicional del manual]\n\n"
-                    "**IMPORTANTE:** Si no encuentras la información exacta en los manuales cargados, indícalo "
-                    "claramente. Está prohibido inventar códigos CIE-10 o campos LAB que no existan en el documento."
+                    "[Observación importante del manual]\n\n"
+                    "**REGLA CRÍTICA:** Si los documentos adjuntos no contienen la información específica, responde "
+                    "únicamente: 'La atención solicitada no se encuentra registrada en los manuales actualmente cargados.' "
+                    "Está estrictamente prohibido inventar códigos o suponer campos LAB."
                 )
                 
-                # Nota: En el paso de despliegue final vincularemos los PDFs directamente como contexto fijo.
-                respuesta = model.generate_content([prompt_sistema, f"Consulta del usuario: {consulta}"])
+                # Preparamos el contexto enviando los archivos procesados junto al prompt
+                contenido_consulta = [prompt_sistema]
                 
-                # Mostrar el resultado brutal en pantalla
-                str.success("¡Información localizada!")
-                str.markdown(respuesta.text)
+                if archivos_subidos:
+                    for pdf in archivos_subidos:
+                        # Convertimos el archivo cargado para que Gemini lo pueda procesar directamente
+                        bytes_data = pdf.read()
+                        contenido_consulta.append({
+                            "mime_type": "application/pdf",
+                            "data": bytes_data
+                        })
+                else:
+                    st.warning("⚠️ Nota: Actualmente no hay manuales subidos en el panel lateral. Las respuestas se basarán en el conocimiento general del modelo hasta que cargues tus PDFs oficiales.")
+
+                contenido_consulta.append(f"Consulta del usuario: {consulta}")
+                
+                # Generar el resultado analizando los PDFs reales
+                respuesta = model.generate_content(contenido_consulta)
+                
+                st.success("¡Información localizada con éxito!")
+                st.markdown(respuesta.text)
                 
             except Exception as e:
-                str.error(f"Hubo un problema al procesar la consulta: {e}")
+                st.error(f"Hubo un problema al procesar la consulta: {e}")
 
-# 4. Pie de página institucional informativo
-str.markdown("---")
-str.caption("📌 Nota: Este buscador procesa la información basándose en los manuales oficiales cargados por el administrador.")
+# 5. Pie de página institucional
+st.markdown("---")
+st.caption("📌 Nota administrativa: Los cambios y manuales subidos se mantienen vigentes mientras la sesión de la aplicación web permanezca activa.")
+
