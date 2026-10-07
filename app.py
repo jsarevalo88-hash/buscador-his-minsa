@@ -1,11 +1,10 @@
 import streamlit as st
 import google.generativeai as ai
-import os
 
 # 1. Configuración visual de la página
 st.set_page_config(page_title="Buscador HIS MINSA", page_icon="🏥", layout="centered")
 
-# 2. Conexión con la Inteligencia Artificial de Google
+# 2. Conexión segura con la Inteligencia Artificial de Google
 try:
     ai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 except Exception:
@@ -42,10 +41,9 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
     else:
         with st.spinner("Analizando los manuales del MINSA cargados..."):
             try:
-                # Inicializamos el modelo de lectura rápida
+                # Usamos el modelo estándar definitivo compatible con la versión actual
                 model = ai.GenerativeModel('gemini-2.5-flash')
                 
-                # Instrucción estricta para el comportamiento del auditor HIS
                 prompt_sistema = (
                     "Eres un asistente experto en codificación HIS y CIE-10 del Ministerio de Salud del Perú (MINSA).\n"
                     "Tu única tarea es extraer de los documentos proporcionados la forma exacta de registrar la atención solicitada.\n\n"
@@ -64,12 +62,11 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
                     "Está estrictamente prohibido inventar códigos o suponer campos LAB."
                 )
                 
-                # Preparamos el contexto enviando los archivos procesados junto al prompt
-                contenido_consulta = [prompt_sistema]
+                contenido_consulta = []
                 
+                # Adjuntamos los PDFs cargados de forma compatible
                 if archivos_subidos:
                     for pdf in archivos_subidos:
-                        # Convertimos el archivo cargado para que Gemini lo pueda procesar directamente
                         bytes_data = pdf.read()
                         contenido_consulta.append({
                             "mime_type": "application/pdf",
@@ -78,9 +75,11 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
                 else:
                     st.warning("⚠️ Nota: Actualmente no hay manuales subidos en el panel lateral. Las respuestas se basarán en el conocimiento general del modelo hasta que cargues tus PDFs oficiales.")
 
+                # Sumamos las instrucciones y la consulta del médico
+                contenido_consulta.append(prompt_sistema)
                 contenido_consulta.append(f"Consulta del usuario: {consulta}")
                 
-                # Generar el resultado analizando los PDFs reales
+                # Generamos el contenido analizando los PDFs reales
                 respuesta = model.generate_content(contenido_consulta)
                 
                 st.success("¡Información localizada con éxito!")
@@ -92,4 +91,3 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
 # 5. Pie de página institucional
 st.markdown("---")
 st.caption("📌 Nota administrativa: Los cambios y manuales subidos se mantienen vigentes mientras la sesión de la aplicación web permanezca activa.")
-
