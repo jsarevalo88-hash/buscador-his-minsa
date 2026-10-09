@@ -14,14 +14,14 @@ except Exception:
 with st.sidebar:
     st.header("⚙️ Panel de Administración")
     st.subheader("Cargar o Actualizar Manuales HIS")
-    
+
     archivos_subidos = st.file_uploader(
-        "Sube los manuales oficiales en formato PDF:", 
-        type=["pdf"], 
+        "Sube los manuales oficiales en formato PDF:",
+        type=["pdf"],
         accept_multiple_files=True,
         help="Los archivos subidos se procesarán para alimentar el buscador inteligente."
     )
-    
+
     if archivos_subidos:
         st.success(f"📚 {len(archivos_subidos)} manual(es) cargado(s) temporalmente.")
         st.info("La IA procesará estos documentos como contexto para responder las consultas.")
@@ -31,7 +31,7 @@ st.title("🏥 Buscador Inteligente de Codificación HIS")
 st.subheader("Encuentra la forma correcta de registrar tus atenciones médicas")
 
 consulta = st.text_input(
-    "¿Qué atención deseas registrar?", 
+    "¿Qué atención deseas registrar?",
     placeholder="Ej: atención inmediata del recién nacido, tamizaje de depresión, etc."
 )
 
@@ -41,7 +41,6 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
     else:
         with st.spinner("Analizando los manuales del MINSA cargados..."):
             try:
-                # Instrucción estricta para el comportamiento del auditor HIS
                 prompt_sistema = (
                     "Eres un asistente experto en codificación HIS y CIE-10 del Ministerio de Salud del Perú (MINSA).\n"
                     "Tu única tarea es extraer de los documentos proporcionados la forma exacta de registrar la atención solicitada.\n\n"
@@ -60,33 +59,29 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
                     "Está estrictamente prohibido inventar códigos o suponer campos LAB."
                 )
 
-                # Inicializamos usando 'gemini
                 model = ai.GenerativeModel(
-    model_name='gemini-flash-latest',   # <- antes: 'gemini-1.5-pro'
-    system_instruction=prompt_sistema
-)
+                    model_name='gemini-flash-latest',
+                    system_instruction=prompt_sistema
+                )
 
-contenido_consulta = []
+                contenido_consulta = []
 
-if archivos_subidos:
-    for pdf in archivos_subidos:
-        bytes_data = pdf.getvalue()      # <- antes: pdf.read()
-        contenido_consulta.append({
-            "mime_type": "application/pdf",
-            "data": bytes_data
-        })
+                if archivos_subidos:
+                    for pdf in archivos_subidos:
+                        contenido_consulta.append({
+                            "mime_type": "application/pdf",
+                            "data": pdf.getvalue()
+                        })
                 else:
                     st.warning("⚠️ Nota: Actualmente no hay manuales subidos en el panel lateral. Las respuestas se basarán en el conocimiento general del modelo.")
 
-                # Agregamos la pregunta final del usuario
                 contenido_consulta.append(f"Consulta del usuario: {consulta}")
-                
-                # Generamos el contenido
+
                 respuesta = model.generate_content(contenido_consulta)
-                
+
                 st.success("¡Información localizada con éxito!")
                 st.markdown(respuesta.text)
-                
+
             except Exception as e:
                 st.error(f"Hubo un problema al procesar la consulta: {e}")
 
