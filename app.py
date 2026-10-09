@@ -62,19 +62,19 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
 
                 # Inicializamos usando 'gemini-1.5-pro' que es el modelo más estable y compatible para lectura de PDFs extensos
                 model = ai.GenerativeModel(
-                    model_name='gemini-1.5-pro',
-                    system_instruction=prompt_sistema
-                )
-                
-                contenido_consulta = []
-                
-                if archivos_subidos:
-                    for pdf in archivos_subidos:
-                        bytes_data = pdf.read()
-                        contenido_consulta.append({
-                            "mime_type": "application/pdf",
-                            "data": bytes_data
-                        })
+    model_name='gemini-flash-latest',   # <- antes: 'gemini-1.5-pro'
+    system_instruction=prompt_sistema
+)
+
+contenido_consulta = []
+
+if archivos_subidos:
+    for pdf in archivos_subidos:
+        bytes_data = pdf.getvalue()      # <- antes: pdf.read()
+        contenido_consulta.append({
+            "mime_type": "application/pdf",
+            "data": bytes_data
+        })
                 else:
                     st.warning("⚠️ Nota: Actualmente no hay manuales subidos en el panel lateral. Las respuestas se basarán en el conocimiento general del modelo.")
 
