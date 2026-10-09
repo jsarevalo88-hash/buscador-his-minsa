@@ -41,7 +41,7 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
     else:
         with st.spinner("Analizando los manuales del MINSA cargados..."):
             try:
-                # Instrucción estricta para el comportamiento del auditor HIS configurada como system_instruction nativa
+                # Instrucción estricta para el comportamiento del auditor HIS
                 prompt_sistema = (
                     "Eres un asistente experto en codificación HIS y CIE-10 del Ministerio de Salud del Perú (MINSA).\n"
                     "Tu única tarea es extraer de los documentos proporcionados la forma exacta de registrar la atención solicitada.\n\n"
@@ -60,13 +60,12 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
                     "Está estrictamente prohibido inventar códigos o suponer campos LAB."
                 )
 
-                # Inicializamos el modelo oficial gemini-2.5-flash aplicando las instrucciones del sistema correctamente
+                # Inicializamos usando 'gemini-1.5-pro' que es el modelo más estable y compatible para lectura de PDFs extensos
                 model = ai.GenerativeModel(
-                    model_name='gemini-2.5-flash',
+                    model_name='gemini-1.5-pro',
                     system_instruction=prompt_sistema
                 )
                 
-                # Armamos los contenidos de la consulta (primero los archivos de contexto, luego el texto del usuario)
                 contenido_consulta = []
                 
                 if archivos_subidos:
@@ -82,7 +81,7 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
                 # Agregamos la pregunta final del usuario
                 contenido_consulta.append(f"Consulta del usuario: {consulta}")
                 
-                # Generamos el contenido enviando la lista ordenada de inputs
+                # Generamos el contenido
                 respuesta = model.generate_content(contenido_consulta)
                 
                 st.success("¡Información localizada con éxito!")
