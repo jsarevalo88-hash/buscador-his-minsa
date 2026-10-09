@@ -1,6 +1,7 @@
 import hmac
 import json
 import tempfile
+import re
 from urllib.parse import quote
 
 import requests
@@ -235,7 +236,40 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
             )
 
         except Exception as e:
-            st.error(f"Hubo un problema al procesar la consulta: {e}")
+            texto = str(e)
+            texto_min = texto.lower()
+
+            if "429" in texto or "quota" in texto_min or "resource_exhausted" in texto_min:
+                # Intentar leer cuánto falta para que se renueve la cuota
+                espera = ""
+                m = re.search(r"seconds:\s*(\d+)", texto)
+                if m:
+                    seg = int(m.group(1))
+                    horas, resto = divmod(seg, 3600)
+                    minutos = resto // 60
+                    espera = f" Se renovará en aproximadamente {horas} h {minutos} min."
+                st.error(
+                    "⛔ **Se agotó la cuota de uso de la IA (tokens/solicitudes).** "
+                    "El servicio no puede procesar más consultas por ahora. "
+                    f"Inténtalo más tarde.{espera}"
+                )
+
+            elif "api key" in texto_min or "api_key_invalid" in texto_min:
+                st.error(
+                    "🔑 **La clave de acceso a la IA no es válida.** "
+                    "Avisa al administrador de la aplicación."
+                )
+
+            elif "timeout" in texto_min or "deadline" in texto_min:
+                st.error(
+                    "⏳ **La consulta tardó demasiado en responder.** "
+                    "Inténtalo de nuevo en unos minutos."
+                )
+
+            else:
+                st.error("❌ Ocurrió un error inesperado al procesar la consulta.")
+                with st.expander("Ver detalle técnico"):
+                    st.code(texto)
 
 # ---------------------------------------------------------------
 # PIE DE PÁGINA
