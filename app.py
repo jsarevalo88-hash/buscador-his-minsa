@@ -60,7 +60,7 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
                     "Está estrictamente prohibido inventar códigos o suponer campos LAB."
                 )
 
-                # Inicializamos usando 'gemini-1.5-pro' que es el modelo más estable y compatible para lectura de PDFs extensos
+                # Inicializamos usando 'gemini
                 model = ai.GenerativeModel(
     model_name='gemini-flash-latest',   # <- antes: 'gemini-1.5-pro'
     system_instruction=prompt_sistema
