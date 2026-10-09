@@ -41,9 +41,7 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
     else:
         with st.spinner("Analizando los manuales del MINSA cargados..."):
             try:
-                # Usamos el modelo estándar definitivo compatible con la versión actual
-                model = ai.GenerativeModel('gemini-2.5-flash')
-                
+                # Instrucción estricta para el comportamiento del auditor HIS configurada como system_instruction nativa
                 prompt_sistema = (
                     "Eres un asistente experto en codificación HIS y CIE-10 del Ministerio de Salud del Perú (MINSA).\n"
                     "Tu única tarea es extraer de los documentos proporcionados la forma exacta de registrar la atención solicitada.\n\n"
@@ -61,10 +59,16 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
                     "únicamente: 'La atención solicitada no se encuentra registrada en los manuales actualmente cargados.' "
                     "Está estrictamente prohibido inventar códigos o suponer campos LAB."
                 )
+
+                # Inicializamos el modelo oficial gemini-2.5-flash aplicando las instrucciones del sistema correctamente
+                model = ai.GenerativeModel(
+                    model_name='gemini-2.5-flash',
+                    system_instruction=prompt_sistema
+                )
                 
+                # Armamos los contenidos de la consulta (primero los archivos de contexto, luego el texto del usuario)
                 contenido_consulta = []
                 
-                # Adjuntamos los PDFs cargados de forma compatible
                 if archivos_subidos:
                     for pdf in archivos_subidos:
                         bytes_data = pdf.read()
@@ -73,13 +77,12 @@ if st.button("🔍 Buscar Forma de Registro", use_container_width=True):
                             "data": bytes_data
                         })
                 else:
-                    st.warning("⚠️ Nota: Actualmente no hay manuales subidos en el panel lateral. Las respuestas se basarán en el conocimiento general del modelo hasta que cargues tus PDFs oficiales.")
+                    st.warning("⚠️ Nota: Actualmente no hay manuales subidos en el panel lateral. Las respuestas se basarán en el conocimiento general del modelo.")
 
-                # Sumamos las instrucciones y la consulta del médico
-                contenido_consulta.append(prompt_sistema)
+                # Agregamos la pregunta final del usuario
                 contenido_consulta.append(f"Consulta del usuario: {consulta}")
                 
-                # Generamos el contenido analizando los PDFs reales
+                # Generamos el contenido enviando la lista ordenada de inputs
                 respuesta = model.generate_content(contenido_consulta)
                 
                 st.success("¡Información localizada con éxito!")
